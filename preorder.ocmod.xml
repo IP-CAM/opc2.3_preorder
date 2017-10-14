@@ -1,0 +1,581 @@
+<modification>
+    <name>Preorder</name>
+    <version>2.3</version>
+    <link>https://www.domashka.in.ua/</link>
+    <author>Samwolf1982</author>
+    <code>preorder_ocmod</code>
+
+
+<!--product page-->
+    <!--views-->
+    <file path="catalog/view/theme/*/template/product/product.tpl">
+        <operation>
+            <search><![CDATA[<div class="cart">]]></search>
+            <add position="after" offset="2"><![CDATA[<div class="cart">
+      <?php
+
+        //echo "<pre>";
+        //echo htmlentities(file_get_contents(__FILE__));
+       // echo "</pre>";
+ ?>
+                    <?php if($show_preorder){ ?>
+                     <button class="button" type="button" id="button-cart-preorder" data-loading-text="<?php echo $text_loading; ?>"><span><?php echo $preorder_button_text; ?></span></button>
+                    <?php } ?>
+                </div>]]></add>
+        </operation>
+    </file>
+
+    <!--controllers-->
+    <file path="catalog/controller/product/product.php">
+        <operation info="load translate">
+            <search><![CDATA[public function index() {]]></search>
+            <add position="after"><![CDATA[$this->load->language('extension/module/preorder');
+     $this->load->model('setting/setting');
+        $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+        if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+            $show_preorder=true;
+        }else{
+            $show_preorder=false;
+        }
+]]></add>
+        </operation>
+        <operation info="data add button text">
+            <search><![CDATA[$data['button_cart'] = $this->language->get('button_cart');]]></search>
+            <add position="after"><![CDATA[$data['preorder_button_text'] = $this->language->get('preorder_button_text');]]></add>
+        </operation>
+        <operation info="get id on stock FIRST">
+            <search  ><![CDATA[$product_info = $this->model_catalog_product->getProduct($product_id);]]></search>
+            <add position="after" index="1" ><![CDATA[
+        $data['show_preorder'] =$show_preorder;
+        if ($product_info) {
+            if (  $show_preorder){
+
+                if (!array_key_exists($product_info['stock_status_id'],$preorder_setting['preorder_stock_status'])){
+                    $show_preorder=false;
+                }
+            }
+            $data['show_preorder'] =$show_preorder;
+
+        }
+]]></add>
+        </operation>
+
+        <operation info="if quantity more  zero">
+            <search  ><![CDATA[if ($product_info['quantity'] <= 0) {]]></search>
+            <add position="before" ><![CDATA[
+   if ($product_info['quantity'] > 0) {
+                $show_preorder=false;
+            }
+            $data['show_preorder'] =$show_preorder;
+            ]]></add>
+        </operation>
+
+    </file>
+
+
+
+    <!--model -->
+    <file path="catalog/model/catalog/product.php">
+        <operation info="add stock_status_id ">
+            <search><![CDATA['stock_status'     => $query->row['stock_status'],]]></search>
+            <add position="after"><![CDATA['stock_status_id'     => $query->row['stock_status_id'],]]></add>
+        </operation>
+    </file>
+
+
+
+    <!--style js-->
+    <file path="catalog/view/theme/*/template/product/product.tpl">
+        <operation>
+            <search><![CDATA[<?php echo $footer; ?>]]></search>
+            <add position="before" ><![CDATA[<link rel="stylesheet" href="/catalog/view/theme/default/stylesheet/preorder/stylesheet.css">]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/view/theme/*/template/product/product.tpl">
+        <operation>
+            <search><![CDATA[<?php echo $footer; ?>]]></search>
+            <add position="before" ><![CDATA[<script src="/catalog/view/theme/default/js/preorder/js.js"></script>]]></add>
+        </operation>
+    </file>
+
+    <!--product page end -->
+
+
+
+    <!--checcout cart-->
+
+    <!--controller-->
+    <file path="catalog/controller/checkout/cart.php">
+        <operation>
+            <search info=" show preorder or no n if quaantiyt more than 0" ><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before" ><![CDATA[
+            $this->load->language('extension/module/preorder');
+                $this->load->model('setting/setting');
+                $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+                if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+                    $show_preorder=true;
+                }else{
+                    $show_preorder=false;
+                }
+                $data['preorder_button_text'] = $this->language->get('preorder_button_text');
+                $data['show_preorder'] =$show_preorder;
+                $this->load->model('catalog/product');
+
+                $product_info = $this->model_catalog_product->getProduct($product['product_id']);
+
+
+                if ($product_info) {
+                    if (  $show_preorder){
+
+                        if (!array_key_exists($product_info['stock_status_id'],$preorder_setting['preorder_stock_status'])){
+                            $show_preorder=false;
+                        }
+                    }
+                    $data['show_preorder'] =$show_preorder;
+
+                }
+             $this->load->model('catalog/product');
+                $product_single_info = $this->model_catalog_product->getProduct($product['product_id']);
+                if ($product['quantity']>$product_single_info['quantity'] && $show_preorder ){ // more than on stock n setting module preorder
+                    $show_preorder=true;
+                }else{
+                 $show_preorder=false;
+                }
+
+
+                                    ]]></add>
+        </operation>
+        <operation>
+            <search info="add to array "><![CDATA[$data['products'][] = array(]]></search>
+            <add position="after" ><![CDATA['show_preorder'=>$show_preorder,]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/checkout/checkout.php">
+        <operation info="hide $this->response->redirect($this->url->link('checkout/cart')); line 6">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){ //module on
+
+    // -------- проверка на одно совпадение из массива настроект модуля
+            $show_preorder=false;
+              $products = $this->cart->getProducts();
+            $this->load->model('catalog/product');
+            foreach ($products as $product) {
+                $product_single_info = $this->model_catalog_product->getProduct($product['product_id']);
+                if ($product['quantity']>$product_single_info['quantity']){ // more than on stock PREORDER   if (array_key_exit)
+
+                      if (array_key_exists($product_single_info['stock_status_id'],$preorder_setting['preorder_stock_status'])){
+                                     $show_preorder=true; break;
+                                                                                                                         }
+
+                }
+            }
+
+
+
+
+
+
+    //-------
+
+       // $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+
+
+    if (!$show_preorder){
+        $this->response->redirect($this->url->link('checkout/cart'));
+    }
+//var_dump($show_preorder); die('ss');
+    //$this->response->redirect($this->url->link('checkout/cart'));
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--register save-->
+    <file path="catalog/controller/checkout/register.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); line 115">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+        $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //$json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--shiping address save -->
+    <file path="catalog/controller/checkout/shipping_address.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); line 88">
+            <search ><![CDATA[  if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+       $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //$json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--payment address save -->
+    <file path="catalog/controller/checkout/payment_address.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); line 77">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+       $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //$json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--checkout login save -->
+    <file path="catalog/controller/checkout/login.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); line 77">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+       $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //$json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+
+    <!--step  2 checckout gues-->
+    <file path="catalog/controller/checkout/guest.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); step  2  line 6">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+    $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //  $json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+
+
+
+    <!--step 3  checckout gues-->
+    <file path="catalog/controller/checkout/shipping_method.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); step  3  line 92">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+    $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //  $json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+
+
+    <!--step 4  checckout gues ship save-->
+    <file path="catalog/controller/checkout/guest_shipping.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); step  4  line 106">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+    $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //  $json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+
+    <!--step 5  payment methos  save-->
+    <file path="catalog/controller/checkout/payment_method.php">
+        <operation info="hide $json['redirect'] = $this->url->link('checkout/cart'); step  5  line 144">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+    $json['redirect'] = $this->url->link('checkout/cart');
+    }
+
+    //  $json['redirect'] = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+
+
+    <!--step 6  checkout confirm  save-->
+    <file path="catalog/controller/checkout/confirm.php">
+        <operation info="hide $redirect = $this->url->link('checkout/cart') step  6  line 33">
+            <search ><![CDATA[if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {]]></search>
+            <add position="replace" offset="1"><![CDATA[
+if ((!$this->cart->hasProducts() && empty($this->session->data['vouchers'])) || (!$this->cart->hasStock() && !$this->config->get('config_stock_checkout'))) {
+
+    $this->load->language('extension/module/preorder');
+    $this->load->model('setting/setting');
+    $preorder_setting= $this->model_setting_setting->getSetting('preorder', $this->config->get('config_store_id'));
+
+    if (!empty($preorder_setting['preorderenabled']) && !empty($preorder_setting['preorder_stock_status']) &&  $preorder_setting['preorderenabled']=='yes' ){
+
+        $show_preorder=true;
+    }else{
+        $show_preorder=false;
+    }
+    if (!$this->cart->hasProducts()){
+        $show_preorder=false;
+    }
+    if (!$show_preorder){
+$redirect = $this->url->link('checkout/cart');
+    }
+
+    //  $redirect = $this->url->link('checkout/cart');
+            ]]></add>
+        </operation>
+    </file>
+
+
+
+
+    <!--view-->
+
+    <file path="catalog/view/theme/*/template/checkout/cart.tpl">
+        <operation>
+            <search><![CDATA[<?php if (!$product['stock']) { ?>]]></search>
+            <add position="before" ><![CDATA[
+                    <?php
+                        if($product['show_preorder']){
+                          echo   "<span class='text-danger preordercarttext'>{$preorder_button_text}</span>";
+                          }
+                   ?>
+
+]]></add>
+        </operation>
+
+    </file>
+
+
+
+
+
+
+    <!--confirm file cod file change all-->
+
+    <file path="catalog/controller/extension/payment/cod.php">
+        <operation>
+            <search><![CDATA[public function confirm() {]]></search>
+            <add position="after" ><![CDATA[
+            if ($this->session->data['payment_method']['code'] == 'cod') {
+            $this->load->model('checkout/order');
+            // всю корзину пройти если есть хоть один предзаказ тогд все предзаказ
+            // Validate minimum quantity requirements.
+            $products = $this->cart->getProducts();
+            $this->load->model('catalog/product');
+            $show_preorder=false;
+            foreach ($products as $product) {
+                $product_single_info = $this->model_catalog_product->getProduct($product['product_id']);
+                if ($product['quantity']>$product_single_info['quantity']){ // more than on stock PREORDER
+                    $show_preorder=true; break;
+                }
+
+            }
+            $this->load->model('setting/setting');
+            $store_id = $this->config->get('config_store_id');;
+             $preorder_setting=  $this->model_setting_setting->getSetting('preorder', $store_id);
+             if (isset($preorder_setting['preorder_status']) && isset($preorder_setting['preorderenabled']) ){
+                   if ($preorder_setting['preorderenabled']=='yes'){
+                       if ($show_preorder){
+                             $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $preorder_setting['preorder_status']);
+                       }else{
+                           $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('cod_order_status_id'));
+                       }
+
+                   }
+             }else{
+                 $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('cod_order_status_id'));
+             }
+
+
+
+        }
+        return;
+
+]]></add>
+        </operation>
+
+    </file>
+
+
+
+    <!--translate-->
+    <file path="catalog/language/en-gb/checkout/cart.php">
+        <operation>
+            <search><![CDATA[$_['heading_title']]]></search>
+            <add position="before"><![CDATA[$_['but_preorder'] = 'Preorder';]]></add>
+        </operation>
+    </file>
+    <file path="catalog/language/ru-ru/checkout/cart.php">
+        <operation>
+            <search><![CDATA[$_['heading_title']]]></search>
+            <add position="before"><![CDATA[$_['but_preorder'] = 'Предзаказ';]]></add>
+        </operation>
+    </file>
+    <file path="catalog/language/uk-ua/checkout/cart.php">
+        <operation>
+            <search><![CDATA[$_['heading_title']]]></search>
+            <add position="before"><![CDATA[$_['but_preorder'] = 'Попередне замовлення';]]></add>
+        </operation>
+    </file>
+
+    <!--checcout end cart-->
+
+
+
+
+
+
+
+
+</modification>
