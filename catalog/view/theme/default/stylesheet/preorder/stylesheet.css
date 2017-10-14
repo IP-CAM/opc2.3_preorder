@@ -1,0 +1,32 @@
+.col-2 #button-cart-preorder{
+    background: #fff;
+    height: 40px;
+    line-height:40px;
+    font-weight: 400;
+    color: #1891ac;
+    border: 1px solid #1891ac;
+    float:left;
+    border-radius:5px;
+    text-transform:inherit;
+    padding: 0 20px;
+    font-size: 15px;
+    -webkit-transition: ease .3s all;
+    -moz-transition: ease .3s all;
+    transition: ease .3s all;
+}
+.col-2 #button-cart-preorder:before{
+    font-family: 'Ionicons';
+    content: "\f110";
+    font-size: 21px;
+    display: inline-block;
+    color: #1891ac;
+    line-height: 1;
+    margin-right:8px;
+}
+.col-2 #button-cart-preorder:before:hover{
+    background:#1891ac;
+    color:#fff;
+}
+.col-2 #button-cart-preorder:before:hover:before{
+    color:#fff;
+}
